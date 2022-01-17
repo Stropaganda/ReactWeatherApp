@@ -1,5 +1,5 @@
 import logo from './logo.svg';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import moment from 'moment';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -37,7 +37,7 @@ function App() {
   const onInputChange = e => setZipCode(e.target.value);
   const onFormSubmit = e => {
     e.preventDefault();
-    fetchData();
+    fetchLocation(zipCode);
     setZipCode('');
   }
 
@@ -58,26 +58,36 @@ function App() {
     setWeatherReports(updatedReports);
   };
 
-  const fetchData = async () => {
-    await fetch(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zipCode}&APPID=${process.env.REACT_APP_API_KEY}`)
+  const fetchLocation = async (zip) => {
+    await fetch(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zip}&APPID=${process.env.REACT_APP_API_KEY}`)
     .then(handleErrors)
     .then(result => {
       if (weatherReports.some(report => result.name === report.name)) {
         setToastMessage('City is already added!');
         setShowToast(true);
       } else {
-        fetch(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${result.lat}&lon=${result.lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
-          .then(handleErrors)
-          .then(result2 => {
-            result2.name = result.name;
-            result2.reportInView = result2.current;
-            result2.daily = result2.daily.slice(1, 4);
-            setWeatherReports([...weatherReports, result2]);
-          }).catch(function(error) {
-            error.json().then((body) => {
-              showApiErrors(body);
-            });
-          });
+        fetchWeather(result.lat, result.lon, result.name);
+      }
+    }).catch(function(error) {
+      error.json().then((body) => {
+        showApiErrors(body);
+      });
+    });
+  }
+
+  const fetchWeather = async (lat, lon, name, i) => {
+    await fetch(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${lat}&lon=${lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
+    .then(handleErrors)
+    .then(result2 => {
+      result2.name = name;
+      result2.reportInView = result2.current;
+      result2.daily = result2.daily.slice(1, 4);
+      if(i !== undefined) {
+        const updatedReports = [...weatherReports];
+        updatedReports[i] = result2;
+        setWeatherReports(updatedReports);
+      } else {
+        setWeatherReports([...weatherReports, result2]);
       }
     }).catch(function(error) {
       error.json().then((body) => {
@@ -136,6 +146,13 @@ function App() {
   //error section
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  useEffect(()=> {
+    console.log('init');
+    weatherReports.map((report, i) => {
+      fetchWeather(report.lat, report.lon, report.name, i);
+    });
+  },[])
 
   return (
     <div>
