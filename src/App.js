@@ -3,9 +3,12 @@ import { useState } from 'react';
 import moment from 'moment';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { useLocalStorage } from "./useLocalStorage";
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
 import CloseButton from 'react-bootstrap/CloseButton';
 import ToastContainer from 'react-bootstrap/ToastContainer';
@@ -30,16 +33,16 @@ function App() {
   }
 
   //form section
-  const [zipCode, setValue] = useState('');
-  const onInputChange = e => setValue(e.target.value);
+  const [zipCode, setZipCode] = useState('');
+  const onInputChange = e => setZipCode(e.target.value);
   const onFormSubmit = e => {
     e.preventDefault();
     fetchData();
-    setValue('');
+    setZipCode('');
   }
 
   //weather section
-  const [weatherReports, setWeatherReports] = useState([]);
+  const [weatherReports, setWeatherReports] = useLocalStorage('weatherReports', []);
   const onDeleteReport = (e) => {
     const index = Number(e.target.value);
     setWeatherReports(weatherReports.filter((value, i) => i !== index));
@@ -89,19 +92,28 @@ function App() {
         return (
           <Card key={report.name} className="mb-3">
             <Card.Body>
-              <Card.Title>{report.name}<CloseButton className="float-end" onClick={onDeleteReport} value={i}/></Card.Title>
-              <Card.Subtitle className="mb-2 text-muted">
-                {moment.unix(report.reportInView.dt).format('MMM Do')}, {report.reportInView.weather[0].main}
-              </Card.Subtitle>
-              <Card.Text className="m-0">
-                Temp: {report.reportInView.temp} &deg;F
-              </Card.Text>
-              <Card.Text className="m-0">
-                Humidity: {report.reportInView.humidity}%
-              </Card.Text>
-              <Card.Text className="m-0">
-                Wind Speed: {report.reportInView.wind_speed} miles/hour
-              </Card.Text>
+            <Container>
+              <Row>
+                <Col xs={4} md={3} lg={2}>
+                  <Card.Img variant="top" src={`${process.env.REACT_APP_ICON_URL}/${report.reportInView.weather[0].icon}.png`} />
+                </Col>
+                <Col>
+                  <Card.Title>{report.name}<CloseButton className="float-end" onClick={onDeleteReport} value={i}/></Card.Title>
+                  <Card.Subtitle className="mb-2 text-muted">
+                    {moment.unix(report.reportInView.dt).format('MMM Do')}, {report.reportInView.weather[0].main}
+                  </Card.Subtitle>
+                  <Card.Text className="m-0">
+                    Temp: {report.reportInView.temp} &deg;F
+                  </Card.Text>
+                  <Card.Text className="m-0">
+                    Humidity: {report.reportInView.humidity}%
+                  </Card.Text>
+                  <Card.Text className="m-0">
+                    Wind Speed: {report.reportInView.wind_speed} miles/hour
+                  </Card.Text>
+                </Col>
+              </Row>
+            </Container>
             </Card.Body>
             <ButtonGroup aria-label="Forcasts">
               <Button variant="secondary" onClick={(e) => onSwitchDayInView(e, report.current)} value={i}>
