@@ -1,5 +1,6 @@
 import logo from './logo.svg';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import moment from 'moment';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -18,11 +19,25 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 const UNITS = "imperial";
 
 function App() {
-  //generic section
-  function handleErrors(res) {
-    if (!res.ok) throw res;
-    return res.json();
-  }
+  //on page load, update the weather for all locations entered previously
+  useEffect(()=> {
+    let promiseArray = [];
+    weatherReports.forEach((report) => {
+      promiseArray.push(fetchWeather(report.lat, report.lon, report.name, true));
+    });
+    axios.all(promiseArray)
+    .then(axios.spread((...results) => {
+      const updatedReports = [...weatherReports];
+      results.forEach((result, i) => {
+        updatedReports[i] = result;
+      });
+      setWeatherReports(updatedReports);
+    }));
+  },[])
+
+  //error section
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   function showApiErrors(body) {
     if(body.message === 'not found') {
       setToastMessage('Zipcode not found!');
@@ -34,7 +49,10 @@ function App() {
 
   //form section
   const [zipCode, setZipCode] = useState('');
-  const onInputChange = e => setZipCode(e.target.value);
+  const onInputChange = e => {
+    const zipCode = e.target.value.replace(/\D/g, "");
+    setZipCode(zipCode);
+  };
   const onFormSubmit = e => {
     e.preventDefault();
     fetchLocation(zipCode);
@@ -58,41 +76,35 @@ function App() {
     setWeatherReports(updatedReports);
   };
 
-  const fetchLocation = async (zip) => {
-    await fetch(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zip}&APPID=${process.env.REACT_APP_API_KEY}`)
-    .then(handleErrors)
+  const fetchLocation = (zip) => {
+    return axios.get(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zip}&APPID=${process.env.REACT_APP_API_KEY}`)
     .then(result => {
-      if (weatherReports.some(report => result.name === report.name)) {
+      let data = result.data;
+      if (weatherReports.some(report => data.name === report.name)) {
         setToastMessage('City is already added!');
         setShowToast(true);
       } else {
-        fetchWeather(result.lat, result.lon, result.name);
+        fetchWeather(data.lat, data.lon, data.name);
       }
-    }).catch(function(error) {
-      error.json().then((body) => {
-        showApiErrors(body);
-      });
+    }).catch((error) => {
+      showApiErrors(error.response.data);
     });
   }
 
-  const fetchWeather = async (lat, lon, name, i) => {
-    await fetch(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${lat}&lon=${lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
-    .then(handleErrors)
+  const fetchWeather = (lat, lon, name, isUpdating) => {
+    return axios.get(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${lat}&lon=${lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
     .then(result2 => {
-      result2.name = name;
-      result2.reportInView = result2.current;
-      result2.daily = result2.daily.slice(1, 4);
-      if(i !== undefined) {
-        const updatedReports = [...weatherReports];
-        updatedReports[i] = result2;
-        setWeatherReports(updatedReports);
+      let data = result2.data;
+      data.name = name;
+      data.reportInView = data.current;
+      data.daily = data.daily.slice(1, 4);
+      if(!isUpdating) {
+        setWeatherReports([...weatherReports, data]);
       } else {
-        setWeatherReports([...weatherReports, result2]);
+        return data;
       }
-    }).catch(function(error) {
-      error.json().then((body) => {
-        showApiErrors(body);
-      });
+    }).catch((error) => {
+      showApiErrors(error.response.data);
     });
   }
 
@@ -143,17 +155,6 @@ function App() {
     );
   }
 
-  //error section
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-
-  useEffect(()=> {
-    console.log('init');
-    weatherReports.map((report, i) => {
-      fetchWeather(report.lat, report.lon, report.name, i);
-    });
-  },[])
-
   return (
     <div>
       <header className="App-header">
@@ -164,7 +165,7 @@ function App() {
         <Form className="mb-3" onSubmit={onFormSubmit}>
           <Form.Group className="mb-3" controlId="formBasicZip">
             <Form.Label>Zip Code</Form.Label>
-            <Form.Control type="text" name="zipcode" placeholder="Enter Zipcode" onChange={onInputChange} value={zipCode} required />
+            <Form.Control type="text" name="zipcode" placeholder="Enter Zipcode" onChange={onInputChange} value={zipCode} required maxLength="5"/>
             <Form.Text className="text-muted">
               Enter the zipcode you wish to get the weather and forecast!
             </Form.Text>
