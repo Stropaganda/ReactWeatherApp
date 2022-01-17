@@ -2,6 +2,13 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+# Local Setup Instructions
+
+1. Clone the repo to your local device.
+2. Open a terminal in the app folder.
+3. Use the 'npm install' command to grab the necessary 3rd party libraries.
+4. Use 'npm start' command to start up the server.
+
 ## Available Scripts
 
 In the project directory, you can run:
