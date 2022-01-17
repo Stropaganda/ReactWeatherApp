@@ -76,8 +76,8 @@ function App() {
     setWeatherReports(updatedReports);
   };
 
-  const fetchLocation = (zip) => {
-    return axios.get(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zip}&APPID=${process.env.REACT_APP_API_KEY}`)
+  const fetchLocation = async (zip) => {
+    return await axios.get(`${process.env.REACT_APP_GEO_API_URL}/zip?zip=${zip}&APPID=${process.env.REACT_APP_API_KEY}`)
     .then(result => {
       let data = result.data;
       if (weatherReports.some(report => data.name === report.name)) {
@@ -91,8 +91,8 @@ function App() {
     });
   }
 
-  const fetchWeather = (lat, lon, name, isUpdating) => {
-    return axios.get(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${lat}&lon=${lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
+  const fetchWeather = async (lat, lon, name, isUpdating) => {
+    return await axios.get(`${process.env.REACT_APP_WEATHER_API_URL}/onecall?lat=${lat}&lon=${lon}&units=${UNITS}&APPID=${process.env.REACT_APP_API_KEY}`)
     .then(result2 => {
       let data = result2.data;
       data.name = name;
